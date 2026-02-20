@@ -1,63 +1,37 @@
-# 🦜️🔗 LangChain {partner}
+# langchain-turbopuffer
 
-This repository contains 1 package with {partner} integrations with LangChain:
+This repository contains the [langchain-turbopuffer](https://pypi.org/project/langchain-turbopuffer/) integration package for LangChain.
 
-- [langchain-{package_lower}](https://pypi.org/project/langchain-{package_lower}/)
+[Turbopuffer](https://turbopuffer.com/) is a fast, cost-efficient vector database. This package provides a `TurbopufferVectorStore` class that integrates with LangChain's vector store interface.
 
-## Initial Repo Checklist (Remove this section after completing)
+## Installation
 
-Welcome to the LangChain Partner Integration Repository! This checklist will help you get started with your new repository.
+```bash
+pip install langchain-turbopuffer
+```
 
-After creating your repo from the integration-repo-template, we'll go through how to
-set up your new repository in Github.
+## Usage
 
-This setup assumes that the partner package is already split. For those instructions,
-see [these docs](https://docs.langchain.com/oss/python/contributing/integrations-langchain).
+```python
+from langchain_turbopuffer import TurbopufferVectorStore
+from langchain_openai import OpenAIEmbeddings
+from turbopuffer import Turbopuffer
 
-> [!NOTE]
-> Integration packages can be managed in your own Github organization.
+tpuf = Turbopuffer(
+    # Pick the right region https://turbopuffer.com/docs/regions
+    region="gcp-us-central1",
+    # This is the default and can be omitted
+    api_key=os.environ.get("TURBOPUFFER_API_KEY"),
+)
 
-Code (auto ecli)
+ns = tpuf.namespace("example")
 
-- [ ] Fill out the readme above (for folks that follow pypi link)
-- [ ] Copy package into /libs folder
-- [ ] Update `"Source Code"` and `repository` under `[project.urls]` in /libs/*/pyproject.toml
+vector_store = TurbopufferVectorStore(
+    namespace=ns,
+    embedding=OpenAIEmbeddings(),
+)
+```
 
-Workflow code (auto ecli)
+## Development
 
-- [ ] Populate .github/workflows/_release.yml with `on.workflow_dispatch.inputs.working-directory.default`
-- [ ] Configure `LIB_DIRS` in .github/scripts/check_diff.py
-
-Workflow code (manual)
-
-- [ ] Add secrets as env vars in .github/workflows/_release.yml
-
-Monorepo workflow code (manual)
-
-- [ ] Pull in new code location, remove old in .github/workflows/api_doc_build.yml
-
-In github (manual)
-
-- [ ] Add any required integration testing secrets in Github
-- [ ] Add any required partner collaborators in Github
-- [ ] "Allow auto-merge" in General Settings (recommended)
-- [ ] Only "Allow squash merging" in General Settings (recommended)
-- [ ] Set up ruleset matching CI build (recommended)
-    - name: ci build
-    - enforcement: active
-    - bypass: write
-    - target: default branch
-    - rules: restrict deletions, require status checks ("CI Success"), block force pushes
-- [ ] Set up ruleset (recommended)
-    - name: require prs
-    - enforcement: active
-    - bypass: none
-    - target: default branch
-    - rules: restrict deletions, require a pull request before merging (0 approvals, no boxes), block force pushes
-
-Pypi (manual)
-
-- [ ] Add new repo to test-pypi and pypi trusted publishing
-
-> [!NOTE]
-> Tag [@ccurme](https://github.com/ccurme) if you have questions on any step.
+See [libs/langchain-turbopuffer/](libs/langchain-turbopuffer/) for the package source.
