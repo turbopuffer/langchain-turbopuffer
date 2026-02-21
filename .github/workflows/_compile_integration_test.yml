@@ -37,7 +37,7 @@ jobs:
 
       - name: Check integration tests compile
         shell: bash
-        run: uv run pytest -m compile tests/integration_tests
+        run: uv run pytest -m compile tests/integration_tests || [ $? -eq 5 ]
 
       - name: Ensure the tests did not create any additional files
         shell: bash
