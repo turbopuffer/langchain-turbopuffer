@@ -12,7 +12,7 @@ on:
       working-directory:
         required: true
         type: string
-        default: 'libs/langchain-turbopuffer'
+        default: 'libs/turbopuffer'
       dangerous-nonmaster-release:
         required: false
         type: boolean
