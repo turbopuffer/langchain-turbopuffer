@@ -141,8 +141,8 @@ class TurbopufferVectorStore(VectorStore):
                 for key, value in metadatas[i].items():
                     if key in _RESERVED_KEYS:
                         logger.warning(
-                            "Metadata key %r conflicts with a reserved turbopuffer column. "
-                            "Storing as %r.",
+                            "Metadata key %r conflicts with a reserved "
+                            "turbopuffer column. Storing as %r.",
                             key,
                             f"{_METADATA_PREFIX}{key}",
                         )
@@ -301,7 +301,6 @@ class TurbopufferVectorStore(VectorStore):
     @classmethod
     def from_texts(
         cls,
-        namespace: NamespacesResource,
         texts: list[str],
         embedding: Embeddings,
         metadatas: list[dict] | None = None,
@@ -315,14 +314,14 @@ class TurbopufferVectorStore(VectorStore):
             texts: List of texts to add.
             embedding: Embedding function.
             metadatas: Optional list of metadatas.
-            namespace: The turbopuffer namespace to use.
             ids: Optional list of IDs.
-            kwargs: Additional keyword arguments passed to the constructor.
+            kwargs: Additional keyword arguments. Must include
+                ``namespace`` (a turbopuffer ``NamespacesResource``).
 
         Returns:
             Initialized `TurbopufferVectorStore`.
         """
-        store = cls(namespace=namespace, embedding=embedding, **kwargs)
+        store = cls(embedding=embedding, **kwargs)
         store.add_texts(texts, metadatas=metadatas, ids=ids)
         return store
 
@@ -363,7 +362,7 @@ class TurbopufferVectorStore(VectorStore):
             if key in _RESERVED_KEYS:
                 continue
             if key.startswith(_METADATA_PREFIX):
-                metadata[key[len(_METADATA_PREFIX):]] = value
+                metadata[key[len(_METADATA_PREFIX) :]] = value
             else:
                 metadata[key] = value
 
