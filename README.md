@@ -2,7 +2,7 @@
 
 This repository contains the [langchain-turbopuffer](https://pypi.org/project/langchain-turbopuffer/) integration package for LangChain.
 
-[Turbopuffer](https://turbopuffer.com/) is a fast, cost-efficient vector database. This package provides a `TurbopufferVectorStore` class that integrates with LangChain's vector store interface.
+[turbopuffer](https://turbopuffer.com/) is a fast, cost-efficient vector database. This package provides a `TurbopufferVectorStore` class that integrates with LangChain's vector store interface.
 
 ## Installation
 

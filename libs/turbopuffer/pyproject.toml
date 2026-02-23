@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "langchain-turbopuffer"
 version = "0.1.0"
-description = "An integration package connecting Turbopuffer and LangChain."
+description = "An integration package connecting turbopuffer and LangChain."
 license = { text = "MIT" }
 readme = "README.md"
 classifiers = [

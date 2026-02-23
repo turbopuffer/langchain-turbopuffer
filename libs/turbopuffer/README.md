@@ -1,6 +1,6 @@
 # langchain-turbopuffer
 
-This package contains the LangChain integration with [Turbopuffer](https://turbopuffer.com).
+This package contains the LangChain integration with [turbopuffer](https://turbopuffer.com).
 
 ## Quick Install
 

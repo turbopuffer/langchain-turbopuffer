@@ -1,4 +1,4 @@
-"""LangChain integration with Turbopuffer vector database."""
+"""LangChain integration with turbopuffer vector database."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ _METADATA_PREFIX = "_meta_"
 
 
 class TurbopufferVectorStore(VectorStore):
-    """Turbopuffer vector store integration.
+    """turbopuffer vector store integration.
 
     Setup:
         Install ``turbopuffer`` and ``langchain-turbopuffer`` packages:

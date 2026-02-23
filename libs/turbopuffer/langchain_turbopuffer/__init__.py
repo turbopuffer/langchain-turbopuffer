@@ -1,4 +1,4 @@
-"""LangChain integration for Turbopuffer vector database."""
+"""LangChain integration for turbopuffer vector database."""
 
 from langchain_turbopuffer.vectorstores import TurbopufferVectorStore
 
