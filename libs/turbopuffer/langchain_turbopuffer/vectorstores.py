@@ -40,7 +40,7 @@ class TurbopufferVectorStore(VectorStore):
 
     Key init args:
         embedding: Embedding function to use.
-        namespace: Turbopuffer namespace to use.
+        namespace: turbopuffer namespace to use.
 
     Example:
         .. code-block:: python
@@ -243,6 +243,7 @@ class TurbopufferVectorStore(VectorStore):
             top_k=k,
             filters=filters if filters is not None else omit,
             include_attributes=True,
+            exclude_attributes=["vector", "$dist"],
         )
 
         return self._rows_to_documents(results.rows or [])
@@ -273,6 +274,7 @@ class TurbopufferVectorStore(VectorStore):
             top_k=k,
             filters=filters if filters is not None else omit,
             include_attributes=True,
+            exclude_attributes=["vector"],
         )
 
         docs_and_scores: list[tuple[Document, float]] = []

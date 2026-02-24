@@ -1,6 +1,6 @@
-"""Integration tests for Turbopuffer vector store.
+"""Integration tests for turbopuffer vector store.
 
-These tests require a live Turbopuffer API key set via the
+These tests require a live turbopuffer API key set via the
 TURBOPUFFER_API_KEY environment variable.
 """
 
