@@ -198,7 +198,7 @@ class TurbopufferVectorStore(VectorStore):
             include_attributes=True,
         )
 
-        return self._rows_to_documents(results.rows)
+        return self._rows_to_documents(results.rows or [])
 
     def similarity_search(
         self,
@@ -245,7 +245,7 @@ class TurbopufferVectorStore(VectorStore):
             include_attributes=True,
         )
 
-        return self._rows_to_documents(results.rows)
+        return self._rows_to_documents(results.rows or [])
 
     def similarity_search_with_score(
         self,
