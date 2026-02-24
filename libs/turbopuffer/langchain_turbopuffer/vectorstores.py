@@ -10,6 +10,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 from turbopuffer import omit
+from turbopuffer.types import Row
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
@@ -329,7 +330,7 @@ class TurbopufferVectorStore(VectorStore):
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _rows_to_documents(self, rows: Any) -> list[Document]:
+    def _rows_to_documents(self, rows: list[Row]) -> list[Document]:
         """Convert turbopuffer result rows to LangChain Documents.
 
         Args:
@@ -341,7 +342,7 @@ class TurbopufferVectorStore(VectorStore):
         return [self._row_to_document(row) for row in rows]
 
     @staticmethod
-    def _row_to_document(row: Any) -> Document:
+    def _row_to_document(row: Row) -> Document:
         """Convert a single turbopuffer row to a LangChain Document.
 
         Args:
