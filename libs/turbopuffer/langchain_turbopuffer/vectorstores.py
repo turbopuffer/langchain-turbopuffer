@@ -242,8 +242,7 @@ class TurbopufferVectorStore(VectorStore):
             rank_by=("vector", "ANN", embedding),
             top_k=k,
             filters=filters if filters is not None else omit,
-            include_attributes=True,
-            exclude_attributes=["vector", "$dist"],
+            exclude_attributes=["vector"],
         )
 
         return self._rows_to_documents(results.rows or [])
@@ -273,7 +272,6 @@ class TurbopufferVectorStore(VectorStore):
             rank_by=("vector", "ANN", query_embedding),
             top_k=k,
             filters=filters if filters is not None else omit,
-            include_attributes=True,
             exclude_attributes=["vector"],
         )
 
