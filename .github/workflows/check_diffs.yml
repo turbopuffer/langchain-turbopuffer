@@ -8,10 +8,6 @@ on:
 
 # If another push to the same PR or branch happens while this workflow is still running,
 # cancel the earlier run in favor of the next run.
-#
-# There's no point in testing an outdated version of the code. GitHub only allows
-# a limited number of job runners to be active at the same time, so it's better to cancel
-# pointless jobs early so that more useful jobs can run sooner.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -34,59 +30,100 @@ jobs:
         run: |
           python .github/scripts/check_diff.py ${{ steps.files.outputs.all }} >> $GITHUB_OUTPUT
     outputs:
-      dirs-to-lint: ${{ steps.set-matrix.outputs.dirs-to-lint }}
-      dirs-to-test: ${{ steps.set-matrix.outputs.dirs-to-test }}
+      dirs-to-lint-py: ${{ steps.set-matrix.outputs.dirs-to-lint-py }}
+      dirs-to-test-py: ${{ steps.set-matrix.outputs.dirs-to-test-py }}
+      dirs-to-lint-js: ${{ steps.set-matrix.outputs.dirs-to-lint-js }}
+      dirs-to-test-js: ${{ steps.set-matrix.outputs.dirs-to-test-js }}
+
+  # Python jobs
   lint:
-    name: cd ${{ matrix.working-directory }}
+    name: "py lint ${{ matrix.working-directory }}"
     needs: [ build ]
-    if: ${{ needs.build.outputs.dirs-to-lint != '[]' }}
+    if: ${{ needs.build.outputs.dirs-to-lint-py != '[]' }}
     strategy:
       matrix:
-        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-lint) }}
+        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-lint-py) }}
     uses: ./.github/workflows/_lint.yml
     with:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
 
   test:
-    name: cd ${{ matrix.working-directory }}
+    name: "py test ${{ matrix.working-directory }}"
     needs: [ build ]
-    if: ${{ needs.build.outputs.dirs-to-test != '[]' }}
+    if: ${{ needs.build.outputs.dirs-to-test-py != '[]' }}
     strategy:
       matrix:
-        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test) }}
+        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test-py) }}
     uses: ./.github/workflows/_test.yml
     with:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
 
   compile-integration-tests:
-    name: cd ${{ matrix.working-directory }}
+    name: "py compile-int ${{ matrix.working-directory }}"
     needs: [ build ]
-    if: ${{ needs.build.outputs.dirs-to-test != '[]' }}
+    if: ${{ needs.build.outputs.dirs-to-test-py != '[]' }}
     strategy:
       matrix:
-        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test) }}
+        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test-py) }}
     uses: ./.github/workflows/_compile_integration_test.yml
     with:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
 
   integration-tests:
-    name: cd ${{ matrix.working-directory }}
+    name: "py int ${{ matrix.working-directory }}"
     needs: [ build ]
-    if: ${{ needs.build.outputs.dirs-to-test != '[]' }}
+    if: ${{ needs.build.outputs.dirs-to-test-py != '[]' }}
     strategy:
       matrix:
-        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test) }}
+        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test-py) }}
     uses: ./.github/workflows/_integration_test.yml
+    with:
+      working-directory: ${{ matrix.working-directory }}
+    secrets: inherit
+
+  # JavaScript jobs
+  js-lint:
+    name: "js lint ${{ matrix.working-directory }}"
+    needs: [ build ]
+    if: ${{ needs.build.outputs.dirs-to-lint-js != '[]' }}
+    strategy:
+      matrix:
+        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-lint-js) }}
+    uses: ./.github/workflows/_js_lint.yml
+    with:
+      working-directory: ${{ matrix.working-directory }}
+    secrets: inherit
+
+  js-test:
+    name: "js test ${{ matrix.working-directory }}"
+    needs: [ build ]
+    if: ${{ needs.build.outputs.dirs-to-test-js != '[]' }}
+    strategy:
+      matrix:
+        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test-js) }}
+    uses: ./.github/workflows/_js_test.yml
+    with:
+      working-directory: ${{ matrix.working-directory }}
+    secrets: inherit
+
+  js-integration-tests:
+    name: "js int ${{ matrix.working-directory }}"
+    needs: [ build ]
+    if: ${{ needs.build.outputs.dirs-to-test-js != '[]' }}
+    strategy:
+      matrix:
+        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test-js) }}
+    uses: ./.github/workflows/_js_integration_test.yml
     with:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
 
   ci_success:
     name: "CI Success"
-    needs: [build, lint, test, compile-integration-tests, integration-tests]
+    needs: [build, lint, test, compile-integration-tests, integration-tests, js-lint, js-test, js-integration-tests]
     if: |
       always()
     runs-on: ubuntu-latest

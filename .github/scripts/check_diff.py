@@ -2,14 +2,19 @@ import json
 import sys
 from typing import Dict
 
-LIB_DIRS = ["libs/turbopuffer"]
+LIB_DIRS_PYTHON = ["libs/langchain-turbopuffer"]
+LIB_DIRS_JS = ["libs/langchainjs-turbopuffer"]
+
+LIB_DIRS = LIB_DIRS_PYTHON + LIB_DIRS_JS
 
 if __name__ == "__main__":
     files = sys.argv[1:]
 
     dirs_to_run: Dict[str, set] = {
-        "lint": set(),
-        "test": set(),
+        "lint-py": set(),
+        "test-py": set(),
+        "lint-js": set(),
+        "test-js": set(),
     }
 
     if len(files) == 300:
@@ -26,13 +31,17 @@ if __name__ == "__main__":
                 ".github/scripts/check_diff.py",
             )
         ):
-            # add all LANGCHAIN_DIRS for infra changes
-            dirs_to_run["test"].update(LIB_DIRS)
+            # add all dirs for infra changes
+            dirs_to_run["test-py"].update(LIB_DIRS_PYTHON)
+            dirs_to_run["test-js"].update(LIB_DIRS_JS)
 
         if any(file.startswith(dir_) for dir_ in LIB_DIRS):
-            for dir_ in LIB_DIRS:
+            for dir_ in LIB_DIRS_PYTHON:
                 if file.startswith(dir_):
-                    dirs_to_run["test"].add(dir_)
+                    dirs_to_run["test-py"].add(dir_)
+            for dir_ in LIB_DIRS_JS:
+                if file.startswith(dir_):
+                    dirs_to_run["test-js"].add(dir_)
         elif file.startswith("libs/"):
             raise ValueError(
                 f"Unknown lib: {file}. check_diff.py likely needs "
@@ -40,8 +49,10 @@ if __name__ == "__main__":
             )
 
     outputs = {
-        "dirs-to-lint": list(dirs_to_run["lint"] | dirs_to_run["test"]),
-        "dirs-to-test": list(dirs_to_run["test"]),
+        "dirs-to-lint-py": list(dirs_to_run["lint-py"] | dirs_to_run["test-py"]),
+        "dirs-to-test-py": list(dirs_to_run["test-py"]),
+        "dirs-to-lint-js": list(dirs_to_run["lint-js"] | dirs_to_run["test-js"]),
+        "dirs-to-test-js": list(dirs_to_run["test-js"]),
     }
     for key, value in outputs.items():
         json_output = json.dumps(value)
