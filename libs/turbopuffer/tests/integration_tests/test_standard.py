@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Generator
 
 import pytest
@@ -13,7 +14,7 @@ class TestTurbopufferStandard(VectorStoreIntegrationTests):
     def vectorstore(self) -> Generator[VectorStore, None, None]:  # type: ignore[override]
         """Get an empty vectorstore for testing."""
         tpuf = Turbopuffer(region="gcp-us-central1")
-        ns = tpuf.namespace("test_langchain_standard")
+        ns = tpuf.namespace(f"test_langchain_standard_{uuid.uuid4().hex[:8]}")
 
         store = TurbopufferVectorStore(
             namespace=ns,
