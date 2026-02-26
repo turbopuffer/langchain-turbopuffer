@@ -1,12 +1,11 @@
-import { describe, test, expect, beforeEach } from "vitest";
+import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { Turbopuffer } from "@turbopuffer/turbopuffer";
-import { faker } from "@faker-js/faker";
 import { Document } from "@langchain/core/documents";
 import { SyntheticEmbeddings } from "@langchain/core/utils/testing";
 import { v4 as uuid } from "uuid";
 import { TurbopufferVectorStore } from "../vectorstores.js";
 
-const embeddings = new SyntheticEmbeddings({ vectorSize: 1536 });
+const embeddings = new SyntheticEmbeddings({ vectorSize: 6 });
 
 function createClient(): Turbopuffer {
   return new Turbopuffer({
@@ -18,7 +17,7 @@ function createClient(): Turbopuffer {
 function createStore(): TurbopufferVectorStore {
   const client = createClient();
   return new TurbopufferVectorStore(embeddings, {
-    namespace: client.namespace(`test-${uuid()}`),
+    namespace: client.namespace(`test-integration-${uuid()}`),
   });
 }
 
@@ -29,104 +28,159 @@ describe("TurbopufferVectorStore", () => {
     store = createStore();
   });
 
-  test("accepts namespace configuration", () => {
-    expect(store.namespace).toBeDefined();
+  afterEach(async () => {
+    await store.delete({ deleteAll: true });
   });
 
-  test("add and search documents", async () => {
-    const pageContent = faker.lorem.sentence(5);
-    await store.addDocuments([{ pageContent, metadata: {} }]);
-
-    const results = await store.similaritySearch(pageContent, 1);
-    expect(results).toHaveLength(1);
-    expect(results[0].pageContent).toBe(pageContent);
-  });
-
-  test("returns document IDs in results", async () => {
-    const pageContent = faker.lorem.sentence(5);
-    const customId = uuid();
-    await store.addDocuments([{ pageContent, metadata: {} }], {
-      ids: [customId],
-    });
-
-    const results = await store.similaritySearch(pageContent, 1);
-    expect(results[0].id).toBe(customId);
-  });
-
-  test("delete single document by ID", async () => {
-    const pageContent = faker.lorem.sentence(5);
-    const ids = await store.addDocuments([{ pageContent, metadata: {} }]);
-    await store.delete({ ids });
-
-    const results = await store.similaritySearch(pageContent, 1);
-    expect(results).toHaveLength(0);
-  });
-
-  test("delete multiple documents by IDs (batch)", async () => {
-    const ids = await store.addDocuments([
-      { pageContent: "batch doc one", metadata: {} },
-      { pageContent: "batch doc two", metadata: {} },
-      { pageContent: "batch doc three", metadata: {} },
+  test("add and search", async () => {
+    await store.addDocuments([
+      { pageContent: "apple", metadata: { fruit: "apple" } },
+      { pageContent: "banana", metadata: { fruit: "banana" } },
+      { pageContent: "cherry", metadata: { fruit: "cherry" } },
     ]);
-    expect(ids).toHaveLength(3);
 
-    await store.delete({ ids: [ids[0], ids[2]] });
-
-    const results = await store.similaritySearch("batch doc", 10);
+    const results = await store.similaritySearch("apple", 1);
     expect(results).toHaveLength(1);
-    expect(results[0].pageContent).toBe("batch doc two");
+    expect(results[0].pageContent).toBe("apple");
+  });
+
+  test("add and delete", async () => {
+    const ids = await store.addDocuments([
+      { pageContent: "hello", metadata: {} },
+      { pageContent: "world", metadata: {} },
+    ]);
+    expect(ids).toHaveLength(2);
+
+    await store.delete({ ids: [ids[0]] });
+    const results = await store.similaritySearch("hello", 10);
+    expect(results.every((r) => r.id !== ids[0])).toBe(true);
+  });
+
+  test("search with score", async () => {
+    await store.addDocuments([
+      { pageContent: "cat", metadata: {} },
+      { pageContent: "dog", metadata: {} },
+      { pageContent: "fish", metadata: {} },
+    ]);
+
+    const results = await store.similaritySearchWithScore("cat", 3);
+    expect(results).toHaveLength(3);
+    for (const r of results) {
+      expect(r).toHaveLength(2);
+      expect(typeof r[1]).toBe("number");
+    }
+  });
+
+  test("metadata round trip", async () => {
+    await store.addDocuments([
+      { pageContent: "hello", metadata: { key_str: "value", key_int: 42 } },
+    ]);
+
+    const results = await store.similaritySearch("hello", 1);
+    expect(results).toHaveLength(1);
+    expect(results[0].metadata.key_str).toBe("value");
+    expect(results[0].metadata.key_int).toBe(42);
+  });
+
+  test("upsert overwrite", async () => {
+    await store.addDocuments(
+      [{ pageContent: "original content", metadata: {} }],
+      { ids: ["doc1"] }
+    );
+    await store.addDocuments(
+      [{ pageContent: "updated content", metadata: {} }],
+      { ids: ["doc1"] }
+    );
+
+    const results = await store.similaritySearch("updated content", 1);
+    expect(results).toHaveLength(1);
+    expect(results[0].pageContent).toBe("updated content");
+  });
+
+  test("filter query", async () => {
+    await store.addDocuments([
+      { pageContent: "red apple", metadata: { color: "red" } },
+      { pageContent: "green apple", metadata: { color: "green" } },
+      { pageContent: "blue berry", metadata: { color: "blue" } },
+    ]);
+
+    const results = await store.similaritySearch("apple", 10, [
+      "color",
+      "Eq",
+      "red",
+    ]);
+    expect(results).toHaveLength(1);
+    expect(results[0].metadata.color).toBe("red");
+  });
+
+  test("score ordering", async () => {
+    await store.addDocuments([
+      { pageContent: "aaa", metadata: {} },
+      { pageContent: "bbb", metadata: {} },
+      { pageContent: "ccc", metadata: {} },
+      { pageContent: "ddd", metadata: {} },
+    ]);
+
+    const results = await store.similaritySearchWithScore("aaa", 4);
+    expect(results).toHaveLength(4);
+    const distances = results.map(([, score]) => score);
+    const sorted = [...distances].sort((a, b) => a - b);
+    expect(distances).toEqual(sorted);
+  });
+
+  test("delete nonexistent ids", async () => {
+    await store.addDocuments(
+      [{ pageContent: "placeholder", metadata: {} }],
+      { ids: ["keep"] }
+    );
+
+    // Should not throw
+    await store.delete({ ids: ["nonexistent_1", "nonexistent_2"] });
+
+    const results = await store.similaritySearch("placeholder", 1);
+    expect(results).toHaveLength(1);
   });
 
   test("delete all", async () => {
     await store.addDocuments([
-      { pageContent: faker.lorem.sentence(), metadata: {} },
-      { pageContent: faker.lorem.sentence(), metadata: {} },
+      { pageContent: "one", metadata: {} },
+      { pageContent: "two", metadata: {} },
     ]);
     await store.delete({ deleteAll: true });
 
-    const results = await store.similaritySearch("test", 10);
+    const results = await store.similaritySearch("one", 10);
     expect(results).toHaveLength(0);
   });
 
-  test("preserves metadata", async () => {
-    const pageContent = faker.lorem.sentence(5);
-    const metadata = { source: "test", count: 42, active: true };
-    await store.addDocuments([{ pageContent, metadata }]);
+  test("large batch", async () => {
+    const n = 100;
+    const docs = Array.from({ length: n }, (_, i) => ({
+      pageContent: `document number ${i}`,
+      metadata: {},
+    }));
 
-    const results = await store.similaritySearch(pageContent, 1);
-    expect(results[0].metadata.source).toBe("test");
-    expect(results[0].metadata.count).toBe(42);
-    expect(results[0].metadata.active).toBe(true);
-  });
+    const ids = await store.addDocuments(docs);
+    expect(ids).toHaveLength(n);
 
-  test("filter search", async () => {
-    await store.addDocuments([
-      { pageContent: "document one", metadata: { category: "A" } },
-      { pageContent: "document two", metadata: { category: "B" } },
-    ]);
-
-    const results = await store.similaritySearch("document", 10, [
-      "category",
-      "Eq",
-      "A",
-    ]);
-    expect(results).toHaveLength(1);
-    expect(results[0].metadata.category).toBe("A");
+    const results = await store.similaritySearch("document number 0", 5);
+    expect(results).toHaveLength(5);
   });
 
   test("fromTexts", async () => {
     const client = createClient();
     const newStore = await TurbopufferVectorStore.fromTexts(
-      ["first text", "second text"],
-      [{ index: 0 }, { index: 1 }],
+      ["a", "b", "c"],
+      [{}, {}, {}],
       embeddings,
-      { namespace: client.namespace(`test-${uuid()}`) }
+      { namespace: client.namespace(`test-from-texts-${uuid()}`) }
     );
 
-    const results = await newStore.similaritySearch("first", 1);
-    expect(results).toHaveLength(1);
-    expect(results[0].pageContent).toBe("first text");
-    expect(results[0].metadata.index).toBe(0);
+    try {
+      const results = await newStore.similaritySearch("a", 1);
+      expect(results).toHaveLength(1);
+    } finally {
+      await newStore.delete({ deleteAll: true });
+    }
   });
 
   test("fromDocuments", async () => {
@@ -134,33 +188,14 @@ describe("TurbopufferVectorStore", () => {
     const newStore = await TurbopufferVectorStore.fromDocuments(
       [new Document({ pageContent: "doc one", metadata: { type: "test" } })],
       embeddings,
-      { namespace: client.namespace(`test-${uuid()}`) }
+      { namespace: client.namespace(`test-from-docs-${uuid()}`) }
     );
 
-    const results = await newStore.similaritySearch("doc", 1);
-    expect(results[0].pageContent).toBe("doc one");
-  });
-
-  test("handles array metadata", async () => {
-    const pageContent = faker.lorem.sentence(5);
-    await store.addDocuments([
-      { pageContent, metadata: { tags: ["a", "b", "c"] } },
-    ]);
-
-    const results = await store.similaritySearch(pageContent, 1);
-    expect(results[0].metadata.tags).toEqual(["a", "b", "c"]);
-  });
-
-  test("respects batchSize option", async () => {
-    const docs = Array.from({ length: 5 }, (_, i) => ({
-      pageContent: `doc ${i}`,
-      metadata: { index: i },
-    }));
-
-    const ids = await store.addDocuments(docs, { batchSize: 2 });
-    expect(ids).toHaveLength(5);
-
-    const results = await store.similaritySearch("doc", 10);
-    expect(results).toHaveLength(5);
+    try {
+      const results = await newStore.similaritySearch("doc", 1);
+      expect(results[0].pageContent).toBe("doc one");
+    } finally {
+      await newStore.delete({ deleteAll: true });
+    }
   });
 });

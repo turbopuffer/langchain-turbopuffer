@@ -14,7 +14,9 @@ import type { Filter } from "@turbopuffer/turbopuffer/resources/custom";
 export type { Filter as TurbopufferFilter } from "@turbopuffer/turbopuffer/resources/custom";
 export type { DistanceMetric as TurbopufferDistanceMetric } from "@turbopuffer/turbopuffer/resources";
 
-const PAGE_CONTENT_KEY = "__lc_page_content";
+const CONTENT_KEY = "content";
+const RESERVED_KEYS = new Set(["id", "vector", CONTENT_KEY, "$dist"]);
+const METADATA_PREFIX = "_meta_";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ColumnData = Record<string, any[]>;
@@ -120,7 +122,7 @@ export class TurbopufferVectorStore extends VectorStore {
       const columns: ColumnData = {
         id: batchIds,
         vector: batchVectors,
-        [PAGE_CONTENT_KEY]: batchDocs.map((d) => d.pageContent),
+        [CONTENT_KEY]: batchDocs.map((d) => d.pageContent),
       };
 
       const metadataKeys = new Set(
@@ -128,7 +130,15 @@ export class TurbopufferVectorStore extends VectorStore {
       );
 
       for (const key of metadataKeys) {
-        columns[key] = batchDocs.map((d) => d.metadata[key] ?? null);
+        const columnKey = RESERVED_KEYS.has(key)
+          ? `${METADATA_PREFIX}${key}`
+          : key;
+        if (RESERVED_KEYS.has(key)) {
+          console.warn(
+            `Metadata key "${key}" conflicts with a reserved turbopuffer column. Storing as "${columnKey}".`
+          );
+        }
+        columns[columnKey] = batchDocs.map((d) => d.metadata[key] ?? null);
       }
 
       return columns;
@@ -193,21 +203,24 @@ export class TurbopufferVectorStore extends VectorStore {
   }
 
   private rowToDocument(row: Row): [DocumentInterface, number] {
-    const {
-      id,
-      vector: _vector,
-      $dist,
-      [PAGE_CONTENT_KEY]: pageContent,
-      ...metadata
-    } = row;
+    const id = String(row.id ?? "");
+    const dist = row.$dist ?? 0;
+    const pageContent =
+      typeof row[CONTENT_KEY] === "string" ? (row[CONTENT_KEY] as string) : "";
+
+    const metadata: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (RESERVED_KEYS.has(key)) continue;
+      if (key.startsWith(METADATA_PREFIX)) {
+        metadata[key.slice(METADATA_PREFIX.length)] = value;
+      } else {
+        metadata[key] = value;
+      }
+    }
 
     return [
-      new Document({
-        id: String(id),
-        pageContent: typeof pageContent === "string" ? pageContent : "",
-        metadata,
-      }),
-      $dist ?? 0,
+      new Document({ id, pageContent, metadata }),
+      dist,
     ];
   }
 

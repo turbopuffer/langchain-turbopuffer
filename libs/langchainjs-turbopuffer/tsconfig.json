@@ -17,6 +17,7 @@
     "strictPropertyInitialization": false,
     "allowJs": true,
     "strict": true,
+    "types": ["node"],
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
