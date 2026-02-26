@@ -11,9 +11,7 @@ const embeddings = new SyntheticEmbeddings({ vectorSize: 1536 });
 function createClient(): Turbopuffer {
   return new Turbopuffer({
     apiKey: process.env.TURBOPUFFER_API_KEY!,
-    ...(process.env.TURBOPUFFER_REGION && {
-      region: process.env.TURBOPUFFER_REGION,
-    }),
+    region: process.env.TURBOPUFFER_REGION ?? "gcp-us-central1",
   });
 }
 
