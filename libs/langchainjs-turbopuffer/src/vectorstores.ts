@@ -163,7 +163,13 @@ export class TurbopufferVectorStore extends VectorStore {
    */
   async delete(params: TurbopufferDeleteParams): Promise<void> {
     if (params.deleteAll) {
-      await this.namespace.deleteAll();
+      try {
+        await this.namespace.deleteAll();
+      } catch (e) {
+        // Namespace may not exist yet (never written to, or already deleted)
+        const message = (e as Error)?.message ?? String(e);
+        if (!message.includes("404")) throw e;
+      }
       return;
     }
     if (params.ids?.length) {

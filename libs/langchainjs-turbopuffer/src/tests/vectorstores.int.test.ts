@@ -24,8 +24,14 @@ function createStore(): TurbopufferVectorStore {
 describe("TurbopufferVectorStore", () => {
   let store: TurbopufferVectorStore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     store = createStore();
+    // Seed the namespace so it exists in turbopuffer (created on first write)
+    await store.addDocuments(
+      [{ pageContent: "dummy", metadata: {} }],
+      { ids: ["dummy"] }
+    );
+    await store.delete({ ids: ["dummy"] });
   });
 
   afterEach(async () => {
