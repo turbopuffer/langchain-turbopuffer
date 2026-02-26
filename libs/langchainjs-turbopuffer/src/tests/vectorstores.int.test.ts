@@ -29,7 +29,11 @@ describe("TurbopufferVectorStore", () => {
   });
 
   afterEach(async () => {
-    await store.delete({ deleteAll: true });
+    try {
+      await store.delete({ deleteAll: true });
+    } catch {
+      // Namespace may not exist if the test never wrote to it
+    }
   });
 
   test("add and search", async () => {
