@@ -1,0 +1,103 @@
+name: Python CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "libs/langchain-turbopuffer/**"
+      - ".github/**"
+  pull_request:
+    paths:
+      - "libs/langchain-turbopuffer/**"
+      - ".github/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_FROZEN: "true"
+  WORKDIR: libs/langchain-turbopuffer
+
+jobs:
+  ci:
+    name: "ci (py${{ matrix.python-version }})"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: libs/langchain-turbopuffer
+    strategy:
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.13"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }} + uv
+        uses: "./.github/actions/uv_setup"
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install lint dependencies
+        run: uv sync --group lint --group typing
+
+      - name: Lint package
+        env:
+          RUFF_OUTPUT_FORMAT: github
+        run: make lint_package
+
+      - name: Install test dependencies
+        run: uv sync --inexact --group test --group test_integration
+
+      - name: Lint tests
+        env:
+          RUFF_OUTPUT_FORMAT: github
+        run: make lint_tests
+
+      - name: Run unit tests
+        run: make test
+
+      - name: Compile integration tests
+        run: uv run pytest -m compile tests/integration_tests || [ $? -eq 5 ]
+
+      - name: Ensure the tests did not create any additional files
+        run: |
+          set -eu
+          STATUS="$(git status)"
+          echo "$STATUS"
+          echo "$STATUS" | grep 'nothing to commit, working tree clean'
+
+  integration:
+    name: "integration (py${{ matrix.python-version }})"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: libs/langchain-turbopuffer
+    strategy:
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.13"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }} + uv
+        uses: "./.github/actions/uv_setup"
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install integration dependencies
+        run: uv sync --group test --group test_integration
+
+      - name: Run integration tests
+        env:
+          TURBOPUFFER_API_KEY: ${{ secrets.TURBOPUFFER_API_KEY }}
+        run: make integration_test
+
+      - name: Ensure the tests did not create any additional files
+        run: |
+          set -eu
+          STATUS="$(git status)"
+          echo "$STATUS"
+          echo "$STATUS" | grep 'nothing to commit, working tree clean'
