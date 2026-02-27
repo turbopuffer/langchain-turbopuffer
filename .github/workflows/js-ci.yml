@@ -1,0 +1,112 @@
+name: JS CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "libs/langchainjs-turbopuffer/**"
+      - ".github/**"
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: "ci (node${{ matrix.node-version }})"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: libs/langchainjs-turbopuffer
+    strategy:
+      matrix:
+        node-version:
+          - "20"
+          - "22"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: libs/langchainjs-turbopuffer/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Ensure the tests did not create any additional files
+        run: |
+          set -eu
+          STATUS="$(git status)"
+          echo "$STATUS"
+          echo "$STATUS" | grep 'nothing to commit, working tree clean'
+
+  integration:
+    name: "integration (node${{ matrix.node-version }})"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: libs/langchainjs-turbopuffer
+    strategy:
+      matrix:
+        node-version:
+          - "20"
+          - "22"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: libs/langchainjs-turbopuffer/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run integration tests
+        env:
+          TURBOPUFFER_API_KEY: ${{ secrets.TURBOPUFFER_API_KEY }}
+        run: pnpm test:int
+
+      - name: Ensure the tests did not create any additional files
+        run: |
+          set -eu
+          STATUS="$(git status)"
+          echo "$STATUS"
+          echo "$STATUS" | grep 'nothing to commit, working tree clean'
+
+  ci_success:
+    name: "JS CI Success"
+    needs: [ci, integration]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          results='${{ toJSON(needs.*.result) }}'
+          echo "$results"
+          if echo "$results" | grep -qE '"(failure|cancelled)"'; then
+            exit 1
+          fi
