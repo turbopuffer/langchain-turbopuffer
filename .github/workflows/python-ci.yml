@@ -6,7 +6,7 @@ on:
     paths:
       - "libs/langchain-turbopuffer/**"
       - ".github/**"
-  workflow_call:
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
