@@ -98,3 +98,17 @@ jobs:
           STATUS="$(git status)"
           echo "$STATUS"
           echo "$STATUS" | grep 'nothing to commit, working tree clean'
+
+  ci_success:
+    name: "Py CI Success"
+    needs: [ci, integration]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          results='${{ toJSON(needs.*.result) }}'
+          echo "$results"
+          if echo "$results" | grep -qE '"(failure|cancelled)"'; then
+            exit 1
+          fi
