@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:turbopuffer/langchain-turbopuffer.git"
+    "url": "git+https://github.com/turbopuffer/langchain-turbopuffer.git"
   },
   "homepage": "https://github.com/turbopuffer/langchain-turbopuffer/tree/main/libs/langchainjs-turbopuffer",
   "scripts": {

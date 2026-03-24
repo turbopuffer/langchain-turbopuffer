@@ -94,6 +94,9 @@ jobs:
           name: js-dist
           path: ${{ inputs.working-directory }}/dist/
 
+      - name: Upgrade npm for trusted publishing (requires npm >= 11.5.1)
+        run: npm install -g npm@latest
+
       - name: Publish to npm
         run: pnpm publish --access public --no-git-checks --provenance
 
