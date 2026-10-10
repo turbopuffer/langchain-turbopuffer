@@ -167,8 +167,7 @@ export class TurbopufferVectorStore extends VectorStore {
         await this.namespace.deleteAll();
       } catch (e) {
         // Namespace may not exist yet (never written to, or already deleted)
-        const message = (e as Error)?.message ?? String(e);
-        if (!message.includes("404")) throw e;
+        if ((e as { status?: unknown })?.status !== 404) throw e;
       }
       return;
     }
@@ -198,8 +197,7 @@ export class TurbopufferVectorStore extends VectorStore {
       });
     } catch (e) {
       // Namespace not found (empty or deleted) returns empty results
-      const message = (e as Error)?.message ?? String(e);
-      if (message.includes("404")) {
+      if ((e as { status?: unknown })?.status === 404) {
         return [];
       }
       throw e;
